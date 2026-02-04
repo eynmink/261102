@@ -13,6 +13,36 @@ const int HEIGHT = 15;
 int x = WIDTH / 2;
 int y = HEIGHT / 2;
 
+// ไฟ
+const int MAX_FIREBALLS = 20;
+
+int fireX[MAX_FIREBALLS];
+int fireY[MAX_FIREBALLS];
+bool fireActive[MAX_FIREBALLS] = { false };
+
+// สร้างลูกไฟใหม่
+void spawnFireball(int startX, int startY) {
+    for (int i = 0; i < MAX_FIREBALLS; i++) {
+        if (!fireActive[i]) {
+            fireActive[i] = true;
+            fireX[i] = startX;
+            fireY[i] = startY + 1; // ออกจากเหนือหัว
+            break;
+        }
+    }
+}
+
+// อัปเดตตำแหน่งลูกไฟ
+void updateFireballs() {
+    for (int i = 0; i < MAX_FIREBALLS; i++) {
+        if (fireActive[i]) {
+            fireY[i]++;   // เคลื่อนขึ้น
+            if (fireY[i] >= HEIGHT)
+                fireActive[i] = false;
+        }
+    }
+}
+
 // ย้ายเคอร์เซอร์
 void gotoXY(int x, int y) {
     COORD c;
@@ -21,16 +51,30 @@ void gotoXY(int x, int y) {
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
 }
 
-// วาดฉากแบบ Double Buffer
+// วาดฉาก
 void draw() {
     string buffer;
 
     for (int row = HEIGHT; row >= 0; row--) {
         for (int col = 0; col < WIDTH; col++) {
-            if (row == y && col == x)
-                buffer += "🦖";
-            else
-                buffer += " ";
+
+            bool drawn = false;
+
+            // วาดลูกไฟก่อน
+            for (int i = 0; i < MAX_FIREBALLS; i++) {
+                if (fireActive[i] && row == fireY[i] && col == fireX[i]) {
+                    buffer += "|";
+                    drawn = true;
+                    break;
+                }
+            }
+
+            if (!drawn) {
+                if (row == y && col == x)
+                    buffer += "🦖";
+                else
+                    buffer += " ";
+            }
         }
         buffer += "\n";
     }
@@ -40,10 +84,8 @@ void draw() {
 }
 
 int main() {
-    // เปิด UTF-8
     SetConsoleOutputCP(CP_UTF8);
 
-    // ซ่อนเคอร์เซอร์ (เนียนขึ้น)
     CONSOLE_CURSOR_INFO cursor;
     cursor.bVisible = false;
     cursor.dwSize = 1;
@@ -60,18 +102,22 @@ int main() {
             if (key == 'a' || key == 'A') x--;
             if (key == 'd' || key == 'D') x++;
 
+            // ยิงเมื่อกด Spacebar
+            if (key == 32) {
+                spawnFireball(x, y);
+            }
+
             // กันออกนอกจอ
             if (x < 0) x = 0;
             if (x >= WIDTH) x = WIDTH - 1;
             if (y < 0) y = 0;
             if (y >= HEIGHT) y = HEIGHT - 1;
-
-            draw();
         }
 
+        updateFireballs();  // อัปเดตลูกไฟตลอด
+        draw();             // วาดใหม่ทุกเฟรม
         Sleep(10);
     }
 
     return 0;
 }
-
